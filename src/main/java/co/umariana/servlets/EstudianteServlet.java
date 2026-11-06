@@ -99,7 +99,33 @@ public class EstudianteServlet extends HttpServlet {
         //               si no existe: response.sendError(HttpServletResponse.SC_NOT_FOUND)
         //   - otra: response.sendError(HttpServletResponse.SC_BAD_REQUEST)
         // Pista: request.getRequestDispatcher(ruta).forward(request, response)
-        throw new UnsupportedOperationException("TODO: doGet");
+        if (accion == null || "listar".equals(accion)) {
+            request.setAttribute("estudiantes", dao.listar());
+            request.getRequestDispatcher(VISTA_LISTAR).forward(request, response);
+            return;
+        }
+
+        if ("editar".equals(accion)) {
+            int id;
+            try {
+                id = Integer.parseInt(request.getParameter("id"));
+            } catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            Estudiante estudiante = dao.buscarPorId(id);
+            if (estudiante == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            request.setAttribute("estudiante", estudiante);
+            request.getRequestDispatcher(VISTA_FORMULARIO).forward(request, response);
+            return;
+        }
+
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST);
     }
 
     // =====================================================================
@@ -137,6 +163,59 @@ public class EstudianteServlet extends HttpServlet {
         //   u otra (400).
         //   Para actualizar construya el objeto con:
         //       new Estudiante(id, nombre.trim(), correo.trim(), Integer.parseInt(semestre.trim()))
-        throw new UnsupportedOperationException("TODO: doPost");
+        if ("actualizar".equals(accion)) {
+            int id;
+            try {
+                id = Integer.parseInt(request.getParameter("id"));
+            } catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            Estudiante estudiante = dao.buscarPorId(id);
+            if (estudiante == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            String nombre = request.getParameter("nombre");
+            String correo = request.getParameter("correo");
+            String semestre = request.getParameter("semestre");
+
+            String error = validar(nombre, correo, semestre);
+            if (error == null) {
+                estudiante = new Estudiante(id, nombre.trim(), correo.trim(),
+                                            Integer.parseInt(semestre.trim()));
+                if (dao.actualizar(estudiante)) {
+                    response.sendRedirect("estudiantes");
+                    return;
+                }
+                error = "No se pudo actualizar el estudiante. Verifique que el correo no esté repetido.";
+            }
+            request.setAttribute("estudiante", estudiante);
+            request.setAttribute("error", error);
+            request.getRequestDispatcher(VISTA_FORMULARIO).forward(request, response);
+            return;
+        }
+
+        if ("eliminar".equals(accion)) {
+            int id;
+            try {
+                id = Integer.parseInt(request.getParameter("id"));
+            } catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            if (dao.eliminar(id)) {
+                response.sendRedirect("estudiantes");
+                return;
+            }
+
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST);
     }
 }
